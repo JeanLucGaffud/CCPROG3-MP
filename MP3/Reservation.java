@@ -1,132 +1,168 @@
-import java.util.*;
-import java.time.LocalDateTime;
+package MP3;
 
+/**
+ * Reservation Class
+ *
+ */
 public class Reservation {
+    private final String code;
     private String guestName;
+    private Hotel hotel;
     private Room room;
-    private LocalDateTime checkInDate;
-    private LocalDateTime checkOutDate;
-    private double totalBookingPrice;
-    private String status;
+    private int checkIn;
+    private int checkOut;
+    private double discountRate;
+    private boolean freeday;
 
-    public Reservation(Guest guest, LocalDateTime checkInDate, LocalDateTime checkOutDate) {
+    /**
+     * Constructor for the Reservation class
+     * @param guest
+     * @param hotel
+     * @param room
+     * @param checkIn
+     * @param checkOut
+     */
+    public Reservation(String guestName, Hotel hotel, Room room, int checkIn, int checkOut) {
+        this.freeday = false;
         this.guestName = guestName;
-        this.rooms = rooms;
-        this.checkInDate = checkInDate;
-        this.checkOutDate = checkOutDate;
-        this.totalBookingPrice = calculateTotalPrice(pricePerNight, checkInDate, checkOutDate);
+        this.code = "RS" + hotel.getReservations().size();
+        this.hotel = hotel;
+        this.room = room;
+        this.checkIn = checkIn;
+        this.checkOut = checkOut;
     }
-    public void reservationStatus(ArrayList<Room> rooms) {
-        if(checkInDate.compareTo(checkOutDate) < 0) {}
-        // Validate check-in and check-out dates
-        if (isValidDate(checkInDate) || isValidDate(checkOutDate)) {
-            System.out.println("Invalid date format. Please enter dates in the format YYYY-MM-DD.");
-            return;
-        }
 
-        // Convert dates to integers for comparison
-        int checkInDay = Integer.parseInt(checkInDate.split("-")[2]);
-        int checkOutDay = Integer.parseInt(checkOutDate.split("-")[2]);
-
-        // Check if check-out is on the 1st or check-in is on the 31st
-        if (checkOutDay == 1 || checkInDay == 31) {
-            System.out.println("Reservations cannot be made when check-out is on the 1st or check-in is on the 31st.");
-            return;
-        }
-
-        // Ensure reservation falls within the same month
-        else if (!isSameMonth(checkInDate, checkOutDate)) {
-            System.out.println("Reservations must fall within the same month.");
-            return;
-        }
-
-        // Ensure check-out date is greater than check-in date
-        else if (checkOutDate.compareTo(checkInDate) <= 0) {
-            System.out.println("Check-out date must be greater than check-in date.");
-            return;
-        }
-    }
-    public boolean isSameMonth(String date1, String date2) {
-        return date1.substring(0, 7).equals(date2.substring(0, 7));
-    }
-    public boolean isValidDate(String date) {
-        String[] parts = date.split("-");
-        if (parts.length != 3) {
-            return true;
-        }
-        int year = Integer.parseInt(parts[0]);
-        int month = Integer.parseInt(parts[1]);
-        int day = Integer.parseInt(parts[2]);
-        return year < 1000 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31;
-    }
-    public int calculateNumberOfNights(String checkInDate, String checkOutDate) {
-        // Assuming date format is YYYY-MM-DD
-        // Example: "2024-06-15"
-        String[] checkInParts = checkInDate.split("-");
-        String[] checkOutParts = checkOutDate.split("-");
-
-        int checkInYear = Integer.parseInt(checkInParts[0]);
-        int checkInMonth = Integer.parseInt(checkInParts[1]);
-        int checkInDay = Integer.parseInt(checkInParts[2]);
-
-        int checkOutYear = Integer.parseInt(checkOutParts[0]);
-        int checkOutMonth = Integer.parseInt(checkOutParts[1]);
-        int checkOutDay = Integer.parseInt(checkOutParts[2]);
-
-        // Assuming all months have 31 days
-        // Simplified calculation
-        return ((checkOutYear - checkInYear) * 12 + (checkOutMonth - checkInMonth)) * 31 + (checkOutDay - checkInDay);
-    }
-    public double calculateTotalPrice(double basePricePerNight, String checkInDate, String checkOutDate) {
-        // Simple calculation: number of nights * base price per night
-        int numberOfNights = calculateNumberOfNights(checkInDate, checkOutDate);
-        return numberOfNights * basePricePerNight;
-    }
-    public void makeReservation(ArrayList<Hotel> hotels) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter guest name: ");
-        String guestName = scanner.nextLine();
-        System.out.print("Enter check-in date (YYYY-MM-DD): ");
-        String checkInDate = scanner.nextLine();
-        System.out.print("Enter check-out date (YYYY-MM-DD): ");
-        String checkOutDate = scanner.nextLine();
-
-        Scanner scanner1 = new Scanner(System.in);
-        String sIndex = scanner1.toString();
-        int index = hotels.indexOf(sIndex);
-
-        // Display available rooms
-        System.out.println("\nAvailable Rooms:");
-        int i = 1;
-        for (Room room : hotels.get(1).getRooms())
-        {
-            for(int j = 0; j < rooms.size(); j++)
-            {
-                System.out.println(i++ + ". " + rooms.get(j).getName() + " - $" + rooms.get(j).getBasePrice() + " per night");
+    /**
+     * Returns the total cost of the reservation
+     * @return
+     */
+    public double calculateTotalDateRate(Hotel hotel) {
+        double total = 0;
+        if(!freeday){
+            for(int i = checkIn; i < checkOut; i++) {
+                double oneDayCost = room.getPrice() * hotel.getDateRate(i);
+                total += oneDayCost;
             }
+        }else
+        {
+            for(int i = checkIn+1; i < checkOut; i++) {
+                double oneDayCost = room.getPrice() * hotel.getDateRate(i);
+                total += oneDayCost;
+            }
+        }
+        return total;
+    }
 
+    public double calculateTotal() {
+        return calculateTotalDateRate(hotel) * (1 - discountRate);
+    }
+
+
+
+    static public boolean isValidDiscountCode(String code) {
+        return code.equals("I_WORK_HERE") || code.equals("STAY4_GET1") || code.equals("PAYDAY");
+    }
+
+    public boolean applyDiscountCode(String code) {
+        if (!isValidDiscountCode(code)) {
+            return false;
         }
 
-        System.out.print("Enter room number to reserve: ");
-        int roomNumber = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
+        int stayDuration = checkOut - checkIn;
 
-        // Validate room number
-        if (roomNumber < 1 || roomNumber > hotels.get(1).getRooms().size()) {
-            System.out.println("Invalid room number. Please try again.");
-            return;
+        switch (code) {
+            case "I_WORK_HERE":
+                discountRate = 0.10;
+                return true;
+            case "STAY4_GET1":
+                if (stayDuration >= 5) {
+                    freeday = true;
+                    return true;
+                }
+                break;
+            case "PAYDAY":
+                if ((checkIn <= 15 && checkOut > 15) || (checkIn <= 30 && checkOut > 30)) {
+                    discountRate = 0.07;
+                    return true;
+                }
+                break;
         }
+        return false;
+    }
+    /**
+     * Returns the hotel of the reservation
+     * @return
+     */
+    public MP3.Hotel getHotel() {
+        return hotel;
+    }
 
-        // Get selected room
-        Room selectedRoom = hotels.get(index).getRooms().get(roomNumber - 1);
+    /**
+     * Sets the hotel of the reservation
+     * @param hotel
+     */
+    public void setHotel(Hotel hotel) {
+        this.hotel = hotel;
+    }
 
-        // Calculate total price based on number of nights
-        double totalPrice = calculateTotalPrice(selectedRoom.getBasePrice(), checkInDate, checkOutDate);
+    /**
+     * Returns the room of the reservation
+     * @return
+     */
+    public Room getRoom() {
+        return room;
+    }
 
-        // Create reservation
-        Reservation reservation = new Reservation(guestName, checkInDate, checkOutDate, selectedRoom, totalPrice);
-        hotels.get(index).addReservation(reservation);
+    /**
+     * Sets the room of the reservation
+     * @param room
+     */
+    public void setRoom(Room room) {
+        this.room = room;
+    }
 
-        System.out.println("Reservation made successfully!");
+    /**
+     * Returns the check in date of the reservation
+     * @return
+     */
+    public int getCheckIn() {
+        return checkIn;
+    }
+
+    /**
+     * Sets the check in date of the reservation
+     * @param checkIn
+     */
+    public void setCheckIn(int checkIn) {
+        this.checkIn = checkIn;
+    }
+
+    /**
+     * Returns the check out date of the reservation
+     * @return
+     */
+    public int getCheckOut() {
+        return checkOut;
+    }
+
+    /**
+     * Sets the check out date of the reservation
+     * @param checkOut
+     */
+    public void setCheckOut(int checkOut) {
+        this.checkOut = checkOut;
+    }
+
+
+    /**
+     * Returns the code of the reservation
+     * @return
+     */
+    public String getCode() {
+        return code;
+    }
+
+    public String getGuestName() {
+        return guestName;
     }
 }
